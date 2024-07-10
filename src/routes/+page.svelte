@@ -159,9 +159,12 @@
 			alert('An error occurred while exporting the database. Please try again.');
 		}
 	}
-	function getSelectValue(state) {
-		if (state.formState.invoice) return state.formState.invoice;
-		return new Date(state.date).toLocaleString();
+	function getSelectValue(state: IInvoice) {
+		let date = new Date(state.date).toLocaleString();
+		let name = null;
+		if (state.formState.invoice) name = '#' + state.formState.invoice;
+		if (state.formState.billTo.name) name += ' ' + state.formState.billTo.name;
+		return name ?? date;
 	}
 
 	$effect(() => {
