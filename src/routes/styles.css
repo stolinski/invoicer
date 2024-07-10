@@ -1,0 +1,86 @@
+:root {
+	--font-sans: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif,
+		Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
+
+	--fs-xxs: clamp(0.64rem, 0.752941vi + 0.45rem, 0.96rem);
+	--fs-xs: clamp(0.8rem, 0.941176vi + 0.56rem, 1.2rem);
+	--fs-base: clamp(1rem, 1.176471vi + 0.71rem, 1.5rem);
+	--fs-s: clamp(1.25rem, 1.482353vi + 0.88rem, 1.88rem);
+	--fs-m: clamp(1.56rem, 1.835294vi + 1.1rem, 2.34rem);
+	--fs-l: clamp(1.95rem, 2.305882vi + 1.37rem, 2.93rem);
+	--fs-xl: clamp(2.44rem, 2.870588vi + 1.72rem, 3.66rem);
+	--fs-xxl: clamp(3.05rem, 3.6vi + 2.15rem, 4.58rem);
+	--fs-xxxl: clamp(3.81rem, 4.494118vi + 2.69rem, 5.72rem);
+
+	--900: #161718;
+	--800: #393752;
+	--700: #4d4f51;
+
+	--400: #c6c6ca;
+	--300: #dad9dc;
+	--200: #e4e2e3;
+	--100: #f6f5ef;
+	--000: #ffffff;
+
+	--fg: var(--900);
+	--fg-1: var(--800);
+	--fg-2: var(--700);
+	--bg: var(--100);
+	--bg-1: var(--300);
+	--bg-2: var(--400);
+	--sheet: var(--100);
+	--blue: #094ccf;
+}
+
+html,
+body {
+	font-family: var(--font-sans);
+	color: var(--fg-1);
+	background: var(--bg);
+}
+
+input,
+textarea,
+button {
+	background: transparent;
+	border: solid 1px var(--400);
+	font-family: var(--font-sans);
+}
+
+h3 {
+	margin-top: 0;
+}
+
+button,
+select {
+	border: 0;
+	background: var(--000);
+	border-radius: 4px;
+	padding: 4px 10px;
+	box-shadow:
+		rgba(50, 50, 93, 0.25) 0px 2px 5px -1px,
+		rgba(0, 0, 0, 0.3) 0px 1px 3px -1px;
+}
+
+@media print {
+	input::placeholder,
+	textarea::placeholder,
+	.inactive {
+		opacity: 0;
+		display: none;
+	}
+	.control {
+		display: none;
+	}
+	textarea {
+		resize: none;
+	}
+	section {
+		background: transparent;
+		box-shadow: none !important;
+	}
+	h1,
+	header {
+		display: none;
+	}
+}
