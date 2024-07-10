@@ -48,181 +48,179 @@
 </header>
 
 <section>
-	<form>
-		<div class="flex space-between">
+	<div class="flex space-between">
+		<div>
 			<div>
-				<div>
-					<label for="biz">Business</label>
-					<input bind:value={form.biz} type="text" id="biz" name="biz" placeholder="Company Name" />
-				</div>
-				<div>
-					<label for="name">Name</label>
-					<input bind:value={form.name} type="text" id="name" name="name" placeholder="Your Name" />
-				</div>
-				<div>
-					<label for="address">Address</label>
-					<textarea
-						bind:value={form.address}
-						id="address"
-						name="address"
-						placeholder="Your Address"
-					/>
-				</div>
+				<label for="biz">Business</label>
+				<input bind:value={form.biz} type="text" id="biz" name="biz" placeholder="Company Name" />
 			</div>
-
-			<div class="zone invoice">
-				<div class="inline">
-					<label for="invoice">Invoice #:</label>
-					<input
-						bind:value={form.invoice}
-						type="text"
-						id="invoice"
-						name="invoice"
-						placeholder="0000"
-					/>
-				</div>
-				<div class="inline">
-					<label for="invoice-date">Date:</label>
-					<input bind:value={form.invoiceDate} type="date" id="invoice-date" name="invoice-date" />
-				</div>
-				<div class="inline">
-					<label for="due">Due Date:</label>
-					<input bind:value={form.due} type="date" id="due" name="due" />
-				</div>
+			<div>
+				<label for="name">Name</label>
+				<input bind:value={form.name} type="text" id="name" name="name" placeholder="Your Name" />
+			</div>
+			<div>
+				<label for="address">Address</label>
+				<textarea
+					bind:value={form.address}
+					id="address"
+					name="address"
+					placeholder="Your Address"
+				/>
 			</div>
 		</div>
 
-		<div class="flex close">
-			<div class="zone" class:inactive={!form.billTo.active}>
-				<h3>Bill To</h3>
-				<button onclick={() => (form.billTo.active = !form.billTo.active)} class="activate control"
-					>Activate</button
-				>
-
-				<div>
-					<label for="name">Name</label>
-					<input
-						bind:value={form.billTo.name}
-						type="text"
-						id="name"
-						name="name"
-						placeholder="Their Name"
-					/>
-				</div>
-				<div>
-					<label for="address">Address</label>
-					<textarea
-						bind:value={form.billTo.address}
-						id="address"
-						name="address"
-						placeholder="Their Address"
-					/>
-				</div>
+		<div class="zone invoice">
+			<div class="inline">
+				<label for="invoice">Invoice #:</label>
+				<input
+					bind:value={form.invoice}
+					type="text"
+					id="invoice"
+					name="invoice"
+					placeholder="0000"
+				/>
 			</div>
+			<div class="inline">
+				<label for="invoice-date">Date:</label>
+				<input bind:value={form.invoiceDate} type="date" id="invoice-date" name="invoice-date" />
+			</div>
+			<div class="inline">
+				<label for="due">Due Date:</label>
+				<input bind:value={form.due} type="date" id="due" name="due" />
+			</div>
+		</div>
+	</div>
 
-			<div class="zone" class:inactive={!form.shipTo.active}>
-				<h3>Ship To</h3>
-				<button onclick={() => (form.shipTo.active = !form.shipTo.active)} class="activate"
-					>Activate</button
-				>
-				<div>
-					<label for="ship-name">Name</label>
-					<input
-						bind:value={form.shipTo.name}
-						type="text"
-						id="ship-name"
-						name="ship-name"
-						placeholder="Their Name"
-					/>
-				</div>
-				<div>
-					<label for="ship-address">Address</label>
-					<textarea
-						bind:value={form.shipTo.address}
-						id="ship-address"
-						name="ship-address"
-						placeholder="Their Address"
-					/>
-				</div>
+	<div class="flex close">
+		<div class="zone" class:inactive={!form.billTo.active}>
+			<h3>Bill To</h3>
+			<button onclick={() => (form.billTo.active = !form.billTo.active)} class="activate control"
+				>Activate</button
+			>
+
+			<div>
+				<label for="name">Name</label>
+				<input
+					bind:value={form.billTo.name}
+					type="text"
+					id="name"
+					name="name"
+					placeholder="Their Name"
+				/>
+			</div>
+			<div>
+				<label for="address">Address</label>
+				<textarea
+					bind:value={form.billTo.address}
+					id="address"
+					name="address"
+					placeholder="Their Address"
+				/>
 			</div>
 		</div>
 
-		<h3>Items</h3>
-		<table>
-			<thead>
+		<div class="zone" class:inactive={!form.shipTo.active}>
+			<h3>Ship To</h3>
+			<button onclick={() => (form.shipTo.active = !form.shipTo.active)} class="activate"
+				>Activate</button
+			>
+			<div>
+				<label for="ship-name">Name</label>
+				<input
+					bind:value={form.shipTo.name}
+					type="text"
+					id="ship-name"
+					name="ship-name"
+					placeholder="Their Name"
+				/>
+			</div>
+			<div>
+				<label for="ship-address">Address</label>
+				<textarea
+					bind:value={form.shipTo.address}
+					id="ship-address"
+					name="ship-address"
+					placeholder="Their Address"
+				/>
+			</div>
+		</div>
+	</div>
+
+	<h3>Items</h3>
+	<table>
+		<thead>
+			<tr>
+				<th style="width: 40px;">QTY</th>
+				<th>Description</th>
+				<th style="width: 100px;">Price</th>
+				<th style="width: 100px;">Amount</th>
+			</tr>
+		</thead>
+		<tbody>
+			{#each form.items as item, i}
 				<tr>
-					<th style="width: 40px;">QTY</th>
-					<th>Description</th>
-					<th style="width: 100px;">Price</th>
-					<th style="width: 100px;">Amount</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each form.items as item, i}
-					<tr>
-						<td>
-							<label for="qty-{i}">QTY</label>
-							<input
-								bind:value={item.qty}
+					<td>
+						<label for="qty-{i}">QTY</label>
+						<input
+							bind:value={item.qty}
+							type="number"
+							id="qty-{i}"
+							name="qty-{i}"
+							placeholder="QTY"
+						/>
+					</td>
+					<td>
+						<label for="description-{i}">Description</label>
+						<input
+							bind:value={item.description}
+							type="text"
+							id="description-{i}"
+							name="description-{i}"
+							placeholder="Description"
+						/>
+					</td>
+					<td>
+						<div class="inline">
+							<label for="price-{i}">Price</label>
+							{currency}<input
+								bind:value={item.price}
 								type="number"
-								id="qty-{i}"
-								name="qty-{i}"
-								placeholder="QTY"
+								id="price-{i}"
+								name="price-{i}"
+								placeholder="Price"
 							/>
-						</td>
-						<td>
-							<label for="description-{i}">Description</label>
-							<input
-								bind:value={item.description}
-								type="text"
-								id="description-{i}"
-								name="description-{i}"
-								placeholder="Description"
+						</div>
+					</td>
+					<td>
+						<div class="inline">
+							<label for="amount-{i}">Amount</label>
+							{currency}<input
+								value={item.qty * item.price}
+								type="number"
+								id="amount-{i}"
+								name="amount-{i}"
+								placeholder="Amount"
 							/>
-						</td>
-						<td>
-							<div class="inline">
-								<label for="price-{i}">Price</label>
-								{currency}<input
-									bind:value={item.price}
-									type="number"
-									id="price-{i}"
-									name="price-{i}"
-									placeholder="Price"
-								/>
-							</div>
-						</td>
-						<td>
-							<div class="inline">
-								<label for="amount-{i}">Amount</label>
-								{currency}<input
-									value={item.qty * item.price}
-									type="number"
-									id="amount-{i}"
-									name="amount-{i}"
-									placeholder="Amount"
-								/>
-							</div>
-						</td>
-					</tr>
-				{/each}
-				<tr class="control">
-					<td style="text-align: center;" colspan="4">
-						<button onclick={add}>+</button>
-						<button onclick={remove}>-</button>
+						</div>
 					</td>
 				</tr>
+			{/each}
+			<tr class="control">
+				<td style="text-align: center;" colspan="4">
+					<button onclick={add}>+</button>
+					<button onclick={remove}>-</button>
+				</td>
+			</tr>
 
-				<tr class="total">
-					<td style="text-align: right;" colspan="3">Total</td>
-					<td>{currency} {form.items.reduce((a, b) => a + b.amount, 0)}</td>
-				</tr>
-			</tbody>
-		</table>
+			<tr class="total">
+				<td style="text-align: right;" colspan="3">Total</td>
+				<td>{currency} {form.items.reduce((a, b) => a + b.amount, 0)}</td>
+			</tr>
+		</tbody>
+	</table>
 
-		<label for="notes">Notes</label>
-		<textarea id="notes" name="notes" placeholder="Notes" />
-	</form>
+	<label for="notes">Notes</label>
+	<textarea id="notes" name="notes" placeholder="Notes" />
 </section>
 
 <style>
