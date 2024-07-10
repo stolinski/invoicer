@@ -242,7 +242,7 @@
 		<div class="zone" class:inactive={!form.billTo.active}>
 			<h3>Bill To</h3>
 			<button onclick={() => (form.billTo.active = !form.billTo.active)} class="activate control"
-				>Activate</button
+				>{form.billTo.active ? 'Deactivate' : 'Activate'}</button
 			>
 
 			<div>
@@ -268,8 +268,8 @@
 
 		<div class="zone" class:inactive={!form.shipTo.active}>
 			<h3>Ship To</h3>
-			<button onclick={() => (form.shipTo.active = !form.shipTo.active)} class="activate"
-				>Activate</button
+			<button onclick={() => (form.shipTo.active = !form.shipTo.active)} class="activate control"
+				>{form.shipTo.active ? 'Deactivate' : 'Activate'}</button
 			>
 			<div>
 				<label for="ship-name">Name</label>
