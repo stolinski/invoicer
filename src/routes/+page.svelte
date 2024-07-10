@@ -1,12 +1,30 @@
 <script lang="ts">
+	import Dexie from 'dexie';
+
+	// Define the database
+	class InvoiceDB extends Dexie {
+		invoices: Dexie.Table<IInvoice, number>;
+
+		constructor() {
+			super('InvoiceDB');
+			this.version(1).stores({
+				invoices: '++id, date'
+			});
+			this.invoices = this.table('invoices');
+		}
+	}
+
+	const db = new InvoiceDB();
+
 	let sample_row = {
 		qty: 1,
 		description: '',
 		price: 0,
 		amount: 0
 	};
-	let currency = $state('$');
-	let form = $state({
+	// Define the initial form state
+	const initialFormState = {
+		currency: '$',
 		biz: '',
 		name: '',
 		address: '',
@@ -25,7 +43,18 @@
 			address: ''
 		},
 		items: [sample_row]
-	});
+	};
+
+	interface IInvoice {
+		id?: number;
+		date: string;
+		formState: typeof initialFormState;
+	}
+
+	let status: 'LOADING' | 'LOADED' | 'CREATING' | 'CHANGING' = $state('LOADING');
+	let savedStates: IInvoice[] = $state([]);
+	let selectedStateId: number | null = $state(null);
+	let form: typeof initialFormState = $state(initialFormState);
 
 	function add() {
 		form.items = [...form.items, sample_row];
@@ -34,16 +63,135 @@
 	function remove() {
 		form.items = form.items.slice(0, -1);
 	}
+
+	// Function to save the current form state
+	async function saveFormState(form: undefined | null | typeof initialFormState) {
+		if (status !== 'LOADED') return;
+		if (selectedStateId) {
+			// Update existing invoice
+			await db.invoices.update(selectedStateId, {
+				date: new Date().toISOString(),
+				formState: JSON.parse(JSON.stringify(form))
+			});
+		} else {
+			// Create new invoice
+			const newInvoice = await db.invoices.add({
+				date: new Date().toISOString(),
+				formState: JSON.parse(JSON.stringify(form))
+			});
+			selectedStateId = newInvoice;
+		}
+		await loadSavedStates();
+	}
+
+	// Function to load the most recent form state
+	async function loadMostRecentState() {
+		const mostRecent = await db.invoices.orderBy('date').last();
+		if (mostRecent) {
+			form = mostRecent.formState;
+			selectedStateId = mostRecent.id!;
+		}
+		status = 'LOADED';
+	}
+
+	// Function to load saved states
+	async function loadSavedStates() {
+		savedStates = await db.invoices.orderBy('date').reverse().toArray();
+	}
+
+	// Function to load a specific state
+	async function loadState(event: Event) {
+		const selectElement = event.target as HTMLSelectElement;
+		const selectedId = selectElement.value ? parseInt(selectElement.value, 10) : null;
+
+		if (selectedId !== selectedStateId) {
+			status = 'CHANGING';
+			if (selectedId === null) {
+				// No invoice selected, reset to initial state
+				form = { ...initialFormState };
+			} else {
+				const selectedState = await db.invoices.get(selectedId);
+				if (selectedState) {
+					form = selectedState.formState;
+				} else {
+					console.error('Selected invoice not found');
+					form = { ...initialFormState };
+				}
+			}
+			selectedStateId = selectedId;
+			status = 'LOADED';
+		}
+	}
+	// Function to create a new invoice
+	function createNewInvoice() {
+		status = 'CREATING';
+		selectedStateId = null;
+		form = { ...initialFormState };
+		status = 'LOADED';
+	}
+
+	async function exportDatabaseAsJson() {
+		try {
+			// Fetch all invoices from the database
+			const allInvoices = await db.invoices.toArray();
+
+			// Convert the data to a JSON string
+			const jsonString = JSON.stringify(allInvoices, null, 2);
+
+			// Create a Blob with the JSON data
+			const blob = new Blob([jsonString], { type: 'application/json' });
+
+			// Create a temporary URL for the Blob
+			const url = URL.createObjectURL(blob);
+
+			// Create a link element and trigger the download
+			const link = document.createElement('a');
+			link.href = url;
+			link.download = 'invoice_database_export.json';
+			document.body.appendChild(link);
+			link.click();
+
+			// Clean up
+			document.body.removeChild(link);
+			URL.revokeObjectURL(url);
+		} catch (error) {
+			console.error('Error exporting database:', error);
+			alert('An error occurred while exporting the database. Please try again.');
+		}
+	}
+	function getSelectValue(state) {
+		if (state.formState.invoice) return state.formState.invoice;
+		return new Date(state.date).toLocaleString();
+	}
+
+	$effect(() => {
+		loadMostRecentState();
+		loadSavedStates();
+	});
+
+	$effect(() => {
+		if (status === 'LOADED') {
+			saveFormState(form);
+		}
+	});
 </script>
 
 <header>
 	<h1>Invoicer</h1>
 	<div class="options">
 		<label class="visible" for="currency">Currency:</label>
-		<select name="currency" id="currency" bind:value={currency}>
+		<select name="currency" id="currency" bind:value={form.currency}>
 			<option value="$">$</option>
 			<option value="€">€</option>
 		</select>
+		<button onclick={createNewInvoice}>New Invoice</button>
+		<select value={selectedStateId} onchange={loadState}>
+			<option value={null}>Select a saved invoice</option>
+			{#each savedStates as state}
+				<option value={state.id}>{getSelectValue(state)}</option>
+			{/each}
+		</select>
+		<button onclick={exportDatabaseAsJson}>Export All Invoices as JSON</button>
 	</div>
 </header>
 
@@ -60,12 +208,8 @@
 			</div>
 			<div>
 				<label for="address">Address</label>
-				<textarea
-					bind:value={form.address}
-					id="address"
-					name="address"
-					placeholder="Your Address"
-				/>
+				<textarea bind:value={form.address} id="address" name="address" placeholder="Your Address"
+				></textarea>
 			</div>
 		</div>
 
@@ -115,7 +259,7 @@
 					id="address"
 					name="address"
 					placeholder="Their Address"
-				/>
+				></textarea>
 			</div>
 		</div>
 
@@ -141,7 +285,7 @@
 					id="ship-address"
 					name="ship-address"
 					placeholder="Their Address"
-				/>
+				></textarea>
 			</div>
 		</div>
 	</div>
@@ -182,7 +326,7 @@
 					<td>
 						<div class="inline">
 							<label for="price-{i}">Price</label>
-							{currency}<input
+							{form.currency}<input
 								bind:value={item.price}
 								type="number"
 								id="price-{i}"
@@ -194,7 +338,7 @@
 					<td>
 						<div class="inline">
 							<label for="amount-{i}">Amount</label>
-							{currency}<input
+							{form.currency}<input
 								value={item.qty * item.price}
 								type="number"
 								id="amount-{i}"
@@ -214,13 +358,13 @@
 
 			<tr class="total">
 				<td style="text-align: right;" colspan="3">Total</td>
-				<td>{currency} {form.items.reduce((a, b) => a + b.amount, 0)}</td>
+				<td>{form.currency} {form.items.reduce((a, b) => a + b.amount, 0)}</td>
 			</tr>
 		</tbody>
 	</table>
 
 	<label for="notes">Notes</label>
-	<textarea id="notes" name="notes" placeholder="Notes" />
+	<textarea id="notes" name="notes" placeholder="Notes"></textarea>
 </section>
 
 <style>
