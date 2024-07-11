@@ -1,55 +1,6 @@
 <script lang="ts">
-	import Dexie from 'dexie';
-
-	// Define the database
-	class InvoiceDB extends Dexie {
-		invoices: Dexie.Table<IInvoice, number>;
-
-		constructor() {
-			super('InvoiceDB');
-			this.version(1).stores({
-				invoices: '++id, date'
-			});
-			this.invoices = this.table('invoices');
-		}
-	}
-
-	const db = new InvoiceDB();
-
-	let sample_row = {
-		qty: 1,
-		description: '',
-		price: 0,
-		amount: 0
-	};
-	// Define the initial form state
-	const initialFormState = {
-		currency: '$',
-		biz: '',
-		name: '',
-		address: '',
-		invoice: '',
-		invoiceDate: '',
-		due: '',
-		notes: '',
-		billTo: {
-			active: true,
-			name: '',
-			address: ''
-		},
-		shipTo: {
-			active: false,
-			name: '',
-			address: ''
-		},
-		items: [sample_row]
-	};
-
-	interface IInvoice {
-		id?: number;
-		date: string;
-		formState: typeof initialFormState;
-	}
+	import { sample_row, initialFormState } from './data';
+	import { db, type IInvoice } from './db';
 
 	let status: 'LOADING' | 'LOADED' | 'CREATING' | 'CHANGING' = $state('LOADING');
 	let savedStates: IInvoice[] = $state([]);
@@ -57,7 +8,7 @@
 	let form: typeof initialFormState = $state(initialFormState);
 
 	function add() {
-		form.items = [...form.items, sample_row];
+		form.items.push({ ...sample_row });
 	}
 
 	function remove() {
@@ -159,6 +110,7 @@
 			alert('An error occurred while exporting the database. Please try again.');
 		}
 	}
+
 	function getSelectValue(state: IInvoice) {
 		let date = new Date(state.date).toLocaleString();
 		let name = null;
@@ -304,12 +256,12 @@
 			</tr>
 		</thead>
 		<tbody>
-			{#each form.items as item, i}
+			{#each form.items as item, i ('item-' + i)}
 				<tr>
 					<td>
 						<label for="qty-{i}">QTY</label>
 						<input
-							bind:value={item.qty}
+							bind:value={form.items[i].qty}
 							type="number"
 							id="qty-{i}"
 							name="qty-{i}"
@@ -319,7 +271,7 @@
 					<td>
 						<label for="description-{i}">Description</label>
 						<input
-							bind:value={item.description}
+							bind:value={form.items[i].description}
 							type="text"
 							id="description-{i}"
 							name="description-{i}"
@@ -330,7 +282,7 @@
 						<div class="inline">
 							<label for="price-{i}">Price</label>
 							{form.currency}<input
-								bind:value={item.price}
+								bind:value={form.items[i].price}
 								type="number"
 								id="price-{i}"
 								name="price-{i}"
@@ -342,6 +294,7 @@
 						<div class="inline">
 							<label for="amount-{i}">Amount</label>
 							{form.currency}<input
+								readonly
 								value={item.qty * item.price}
 								type="number"
 								id="amount-{i}"
@@ -361,7 +314,7 @@
 
 			<tr class="total">
 				<td style="text-align: right;" colspan="3">Total</td>
-				<td>{form.currency} {form.items.reduce((a, b) => a + b.amount, 0)}</td>
+				<td>{form.currency} {form.items.reduce((a, b) => a + b.qty * b.price, 0)}</td>
 			</tr>
 		</tbody>
 	</table>
