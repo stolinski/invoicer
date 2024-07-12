@@ -2,10 +2,10 @@
 	import { sample_row, initialFormState } from './data';
 	import { db, type IInvoice } from './db';
 
-	let status: 'LOADING' | 'LOADED' | 'CREATING' | 'CHANGING' = $state('LOADING');
+	let status: 'LOADING' | 'READY' | 'CREATING' | 'CHANGING' = $state('LOADING');
 	let savedStates: IInvoice[] = $state([]);
 	let selectedStateId: number | null = $state(null);
-	let form: typeof initialFormState = $state(initialFormState);
+	let form: typeof initialFormState = $state(structuredClone(initialFormState));
 
 	function add() {
 		form.items.push({ ...sample_row });
@@ -17,18 +17,18 @@
 
 	// Function to save the current form state
 	async function saveFormState(form: undefined | null | typeof initialFormState) {
-		if (status !== 'LOADED') return;
+		if (status !== 'READY') return;
 		if (selectedStateId) {
 			// Update existing invoice
 			await db.invoices.update(selectedStateId, {
 				date: new Date().toISOString(),
-				formState: JSON.parse(JSON.stringify(form))
+				formState: $state.snapshot(form)
 			});
 		} else {
 			// Create new invoice
 			const newInvoice = await db.invoices.add({
 				date: new Date().toISOString(),
-				formState: JSON.parse(JSON.stringify(form))
+				formState: $state.snapshot(form)
 			});
 			selectedStateId = newInvoice;
 		}
@@ -42,7 +42,7 @@
 			form = mostRecent.formState;
 			selectedStateId = mostRecent.id!;
 		}
-		status = 'LOADED';
+		status = 'READY';
 	}
 
 	// Function to load saved states
@@ -50,6 +50,7 @@
 		savedStates = await db.invoices.orderBy('date').reverse().toArray();
 	}
 
+	// Explain why we aren't binding the id
 	// Function to load a specific state
 	async function loadState(event: Event) {
 		const selectElement = event.target as HTMLSelectElement;
@@ -59,26 +60,27 @@
 			status = 'CHANGING';
 			if (selectedId === null) {
 				// No invoice selected, reset to initial state
-				form = { ...initialFormState };
+				form = structuredClone(initialFormState);
 			} else {
 				const selectedState = await db.invoices.get(selectedId);
 				if (selectedState) {
 					form = selectedState.formState;
 				} else {
 					console.error('Selected invoice not found');
-					form = { ...initialFormState };
+					form = structuredClone(initialFormState);
 				}
 			}
 			selectedStateId = selectedId;
-			status = 'LOADED';
+			status = 'READY';
 		}
 	}
+
 	// Function to create a new invoice
 	function createNewInvoice() {
 		status = 'CREATING';
 		selectedStateId = null;
-		form = { ...initialFormState };
-		status = 'LOADED';
+		form = structuredClone(initialFormState);
+		status = 'READY';
 	}
 
 	async function exportDatabaseAsJson() {
@@ -125,7 +127,7 @@
 	});
 
 	$effect(() => {
-		if (status === 'LOADED') {
+		if (status === 'READY') {
 			saveFormState(form);
 		}
 	});
