@@ -1,89 +1,89 @@
 <script lang="ts">
-	import { sample_row, initialFormState } from './data';
+	import { sample_row, initialFormState as initial_data } from './data';
 	import { db, type IInvoice } from './db';
 
 	let status: 'LOADING' | 'READY' | 'CREATING' | 'CHANGING' = $state('LOADING');
-	let savedStates: IInvoice[] = $state([]);
-	let selectedStateId: number | null = $state(null);
-	let form: typeof initialFormState = $state(structuredClone(initialFormState));
+	let all_invoices: IInvoice[] = $state([]);
+	let selected_id: number | null = $state(null);
+	let form_data: typeof initial_data = $state(structuredClone(initial_data));
 
 	function add() {
-		form.items.push({ ...sample_row });
+		form_data.items.push({ ...sample_row });
 	}
 
 	function remove() {
-		form.items = form.items.slice(0, -1);
+		form_data.items = form_data.items.slice(0, -1);
 	}
 
 	// Function to save the current form state
-	async function saveFormState(form: undefined | null | typeof initialFormState) {
+	async function save_form_state(form: typeof initial_data) {
 		if (status !== 'READY') return;
-		if (selectedStateId) {
+		if (selected_id) {
 			// Update existing invoice
-			await db.invoices.update(selectedStateId, {
+			await db.invoices.update(selected_id, {
 				date: new Date().toISOString(),
-				formState: $state.snapshot(form)
+				formState: form
 			});
 		} else {
 			// Create new invoice
 			const newInvoice = await db.invoices.add({
 				date: new Date().toISOString(),
-				formState: $state.snapshot(form)
+				formState: form
 			});
-			selectedStateId = newInvoice;
+			selected_id = newInvoice;
 		}
-		await loadSavedStates();
+		await load_all_invoices();
 	}
 
 	// Function to load the most recent form state
-	async function loadMostRecentState() {
-		const mostRecent = await db.invoices.orderBy('date').last();
-		if (mostRecent) {
-			form = mostRecent.formState;
-			selectedStateId = mostRecent.id!;
+	async function load_recent_invoice() {
+		const most_recent = await db.invoices.orderBy('date').last();
+		if (most_recent) {
+			form_data = most_recent.formState;
+			selected_id = most_recent.id!;
 		}
 		status = 'READY';
 	}
 
 	// Function to load saved states
-	async function loadSavedStates() {
-		savedStates = await db.invoices.orderBy('date').reverse().toArray();
+	async function load_all_invoices() {
+		all_invoices = await db.invoices.orderBy('date').reverse().toArray();
 	}
 
 	// Explain why we aren't binding the id
 	// Function to load a specific state
-	async function loadState(event: Event) {
+	async function load_state(event: Event) {
 		const selectElement = event.target as HTMLSelectElement;
 		const selectedId = selectElement.value ? parseInt(selectElement.value, 10) : null;
 
-		if (selectedId !== selectedStateId) {
+		if (selectedId !== selected_id) {
 			status = 'CHANGING';
 			if (selectedId === null) {
 				// No invoice selected, reset to initial state
-				form = structuredClone(initialFormState);
+				form_data = structuredClone(initial_data);
 			} else {
 				const selectedState = await db.invoices.get(selectedId);
 				if (selectedState) {
-					form = selectedState.formState;
+					form_data = selectedState.formState;
 				} else {
 					console.error('Selected invoice not found');
-					form = structuredClone(initialFormState);
+					form_data = structuredClone(initial_data);
 				}
 			}
-			selectedStateId = selectedId;
+			selected_id = selectedId;
 			status = 'READY';
 		}
 	}
 
 	// Function to create a new invoice
-	function createNewInvoice() {
+	function new_invoice() {
 		status = 'CREATING';
-		selectedStateId = null;
-		form = structuredClone(initialFormState);
+		selected_id = null;
+		form_data = structuredClone(initial_data);
 		status = 'READY';
 	}
 
-	async function exportDatabaseAsJson() {
+	async function export_to_json() {
 		try {
 			// Fetch all invoices from the database
 			const allInvoices = await db.invoices.toArray();
@@ -113,7 +113,7 @@
 		}
 	}
 
-	function getSelectValue(state: IInvoice) {
+	function get_select_display(state: IInvoice) {
 		let date = new Date(state.date).toLocaleString();
 		let name = null;
 		if (state.formState.invoice) name = '#' + state.formState.invoice;
@@ -122,13 +122,13 @@
 	}
 
 	$effect(() => {
-		loadMostRecentState();
-		loadSavedStates();
+		load_recent_invoice();
+		load_all_invoices();
 	});
 
 	$effect(() => {
 		if (status === 'READY') {
-			saveFormState(form);
+			save_form_state(form_data);
 		}
 	});
 </script>
@@ -137,18 +137,18 @@
 	<h1>Invoicer</h1>
 	<div class="options">
 		<label class="visible" for="currency">Currency:</label>
-		<select name="currency" id="currency" bind:value={form.currency}>
+		<select name="currency" id="currency" bind:value={form_data.currency}>
 			<option value="$">$</option>
 			<option value="€">€</option>
 		</select>
-		<button onclick={createNewInvoice}>New Invoice</button>
-		<select value={selectedStateId} onchange={loadState}>
+		<button onclick={new_invoice}>New Invoice</button>
+		<select value={selected_id} onchange={load_state}>
 			<option value={null}>Select a saved invoice</option>
-			{#each savedStates as state}
-				<option value={state.id}>{getSelectValue(state)}</option>
+			{#each all_invoices as state}
+				<option value={state.id}>{get_select_display(state)}</option>
 			{/each}
 		</select>
-		<button onclick={exportDatabaseAsJson}>Export All Invoices as JSON</button>
+		<button onclick={export_to_json}>Export All Invoices as JSON</button>
 	</div>
 </header>
 
@@ -157,15 +157,31 @@
 		<div>
 			<div>
 				<label for="biz">Business</label>
-				<input bind:value={form.biz} type="text" id="biz" name="biz" placeholder="Company Name" />
+				<input
+					bind:value={form_data.biz}
+					type="text"
+					id="biz"
+					name="biz"
+					placeholder="Company Name"
+				/>
 			</div>
 			<div>
 				<label for="name">Name</label>
-				<input bind:value={form.name} type="text" id="name" name="name" placeholder="Your Name" />
+				<input
+					bind:value={form_data.name}
+					type="text"
+					id="name"
+					name="name"
+					placeholder="Your Name"
+				/>
 			</div>
 			<div>
 				<label for="address">Address</label>
-				<textarea bind:value={form.address} id="address" name="address" placeholder="Your Address"
+				<textarea
+					bind:value={form_data.address}
+					id="address"
+					name="address"
+					placeholder="Your Address"
 				></textarea>
 			</div>
 		</div>
@@ -174,7 +190,7 @@
 			<div class="inline">
 				<label for="invoice">Invoice #:</label>
 				<input
-					bind:value={form.invoice}
+					bind:value={form_data.invoice}
 					type="text"
 					id="invoice"
 					name="invoice"
@@ -183,26 +199,32 @@
 			</div>
 			<div class="inline">
 				<label for="invoice-date">Date:</label>
-				<input bind:value={form.invoiceDate} type="date" id="invoice-date" name="invoice-date" />
+				<input
+					bind:value={form_data.invoiceDate}
+					type="date"
+					id="invoice-date"
+					name="invoice-date"
+				/>
 			</div>
 			<div class="inline">
 				<label for="due">Due Date:</label>
-				<input bind:value={form.due} type="date" id="due" name="due" />
+				<input bind:value={form_data.due} type="date" id="due" name="due" />
 			</div>
 		</div>
 	</div>
 
 	<div class="flex close">
-		<div class="zone" class:inactive={!form.billTo.active}>
+		<div class="zone" class:inactive={!form_data.billTo.active}>
 			<h3>Bill To</h3>
-			<button onclick={() => (form.billTo.active = !form.billTo.active)} class="activate control"
-				>{form.billTo.active ? 'Deactivate' : 'Activate'}</button
+			<button
+				onclick={() => (form_data.billTo.active = !form_data.billTo.active)}
+				class="activate control">{form_data.billTo.active ? 'Deactivate' : 'Activate'}</button
 			>
 
 			<div>
 				<label for="name">Name</label>
 				<input
-					bind:value={form.billTo.name}
+					bind:value={form_data.billTo.name}
 					type="text"
 					id="name"
 					name="name"
@@ -212,7 +234,7 @@
 			<div>
 				<label for="address">Address</label>
 				<textarea
-					bind:value={form.billTo.address}
+					bind:value={form_data.billTo.address}
 					id="address"
 					name="address"
 					placeholder="Their Address"
@@ -220,15 +242,16 @@
 			</div>
 		</div>
 
-		<div class="zone" class:inactive={!form.shipTo.active}>
+		<div class="zone" class:inactive={!form_data.shipTo.active}>
 			<h3>Ship To</h3>
-			<button onclick={() => (form.shipTo.active = !form.shipTo.active)} class="activate control"
-				>{form.shipTo.active ? 'Deactivate' : 'Activate'}</button
+			<button
+				onclick={() => (form_data.shipTo.active = !form_data.shipTo.active)}
+				class="activate control">{form_data.shipTo.active ? 'Deactivate' : 'Activate'}</button
 			>
 			<div>
 				<label for="ship-name">Name</label>
 				<input
-					bind:value={form.shipTo.name}
+					bind:value={form_data.shipTo.name}
 					type="text"
 					id="ship-name"
 					name="ship-name"
@@ -238,7 +261,7 @@
 			<div>
 				<label for="ship-address">Address</label>
 				<textarea
-					bind:value={form.shipTo.address}
+					bind:value={form_data.shipTo.address}
 					id="ship-address"
 					name="ship-address"
 					placeholder="Their Address"
@@ -258,12 +281,12 @@
 			</tr>
 		</thead>
 		<tbody>
-			{#each form.items as item, i ('item-' + i)}
+			{#each form_data.items as item, i ('item-' + i)}
 				<tr>
 					<td>
 						<label for="qty-{i}">QTY</label>
 						<input
-							bind:value={form.items[i].qty}
+							bind:value={form_data.items[i].qty}
 							type="number"
 							id="qty-{i}"
 							name="qty-{i}"
@@ -273,7 +296,7 @@
 					<td>
 						<label for="description-{i}">Description</label>
 						<input
-							bind:value={form.items[i].description}
+							bind:value={form_data.items[i].description}
 							type="text"
 							id="description-{i}"
 							name="description-{i}"
@@ -283,8 +306,8 @@
 					<td>
 						<div class="inline">
 							<label for="price-{i}">Price</label>
-							{form.currency}<input
-								bind:value={form.items[i].price}
+							{form_data.currency}<input
+								bind:value={form_data.items[i].price}
 								type="number"
 								id="price-{i}"
 								name="price-{i}"
@@ -295,7 +318,7 @@
 					<td>
 						<div class="inline">
 							<label for="amount-{i}">Amount</label>
-							{form.currency}<input
+							{form_data.currency}<input
 								readonly
 								value={item.qty * item.price}
 								type="number"
@@ -316,7 +339,7 @@
 
 			<tr class="total">
 				<td style="text-align: right;" colspan="3">Total</td>
-				<td>{form.currency} {form.items.reduce((a, b) => a + b.qty * b.price, 0)}</td>
+				<td>{form_data.currency} {form_data.items.reduce((a, b) => a + b.qty * b.price, 0)}</td>
 			</tr>
 		</tbody>
 	</table>
