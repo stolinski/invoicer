@@ -128,7 +128,7 @@
 
 	$effect(() => {
 		if (status === 'READY') {
-			save_form_state(form_data);
+			save_form_state($state.snapshot(form_data));
 		}
 	});
 </script>
