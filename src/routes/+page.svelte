@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { sample_row, initialFormState as initial_data } from './data';
+	import { sample_row, themes, hydrate, initialFormState as initial_data } from './data';
 	import { db, type IInvoice } from './db';
 
 	let status: 'LOADING' | 'READY' | 'CREATING' | 'CHANGING' = $state('LOADING');
@@ -39,7 +39,7 @@
 	async function load_recent_invoice() {
 		const most_recent = await db.invoices.orderBy('date').last();
 		if (most_recent) {
-			form_data = most_recent.formState;
+			form_data = hydrate(most_recent.formState);
 			selected_id = most_recent.id!;
 		}
 		status = 'READY';
@@ -64,7 +64,7 @@
 			} else {
 				const selectedState = await db.invoices.get(selectedId);
 				if (selectedState) {
-					form_data = selectedState.formState;
+					form_data = hydrate(selectedState.formState);
 				} else {
 					console.error('Selected invoice not found');
 					form_data = structuredClone(initial_data);
@@ -79,7 +79,8 @@
 	function new_invoice() {
 		status = 'CREATING';
 		selected_id = null;
-		form_data = structuredClone(initial_data);
+		// Carry the current theme over to the new invoice
+		form_data = { ...structuredClone(initial_data), theme: form_data.theme };
 		status = 'READY';
 	}
 
@@ -141,10 +142,16 @@
 			<option value="$">$</option>
 			<option value="€">€</option>
 		</select>
+		<label class="visible" for="theme">Theme:</label>
+		<select name="theme" id="theme" bind:value={form_data.theme}>
+			{#each themes as theme (theme.id)}
+				<option value={theme.id}>{theme.label}</option>
+			{/each}
+		</select>
 		<button onclick={new_invoice}>New Invoice</button>
 		<select value={selected_id} onchange={load_state}>
 			<option value={null}>Select a saved invoice</option>
-			{#each all_invoices as state}
+			{#each all_invoices as state (state.id)}
 				<option value={state.id}>{get_select_display(state)}</option>
 			{/each}
 		</select>
@@ -152,7 +159,7 @@
 	</div>
 </header>
 
-<section>
+<section class="sheet theme-{form_data.theme}">
 	<div class="flex space-between">
 		<div>
 			<div>
@@ -345,7 +352,7 @@
 	</table>
 
 	<label for="notes">Notes</label>
-	<textarea id="notes" name="notes" placeholder="Notes"></textarea>
+	<textarea bind:value={form_data.notes} id="notes" name="notes" placeholder="Notes"></textarea>
 </section>
 
 <style>
@@ -354,12 +361,82 @@
 	}
 
 	section {
+		/* Theme tokens "standard" defaults */
+		--inv-font: var(--font-sans);
+		--inv-fg: var(--fg-1);
+		--inv-accent: var(--fg-1);
+		--inv-rule: var(--200);
+		--inv-table-border: 1px solid var(--200);
+		--inv-head-bg: transparent;
+		--inv-head-fg: inherit;
+		--inv-head-rule: none;
+		--inv-total-rule: var(--inv-rule);
+		--inv-total-bg: transparent;
+		--inv-heading-transform: none;
+		--inv-heading-spacing: normal;
+
 		padding: 20px;
 		border-radius: 10px;
 		background: linear-gradient(to bottom, #ffffff, var(--sheet));
 		box-shadow:
 			rgba(0, 0, 0, 0.16) 0px 10px 36px 0px,
 			rgba(0, 0, 0, 0.06) 0px 0px 0px 1px;
+		font-family: var(--inv-font);
+		color: var(--inv-fg);
+		print-color-adjust: exact;
+		-webkit-print-color-adjust: exact;
+
+		& input,
+		& textarea {
+			font-family: inherit;
+			color: inherit;
+		}
+
+		& h3 {
+			color: var(--inv-accent);
+			text-transform: var(--inv-heading-transform);
+			letter-spacing: var(--inv-heading-spacing);
+		}
+	}
+
+	/* Classic: serif, black ink, ruled lines */
+	.theme-classic {
+		--inv-font: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+		--inv-fg: #111;
+		--inv-accent: #111;
+		--inv-rule: #cfcfcf;
+		--inv-table-border: none;
+		--inv-head-rule: 3px double #111;
+		--inv-total-rule: #111;
+		--inv-heading-transform: uppercase;
+		--inv-heading-spacing: 0.08em;
+	}
+
+	/* Modern: clean sans with a navy accent header */
+	.theme-modern {
+		--inv-font: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+		--inv-fg: #1d2330;
+		--inv-accent: #1f3a5f;
+		--inv-rule: #e3e7ee;
+		--inv-table-border: none;
+		--inv-head-bg: #1f3a5f;
+		--inv-head-fg: #fff;
+		--inv-total-rule: #1f3a5f;
+		--inv-total-bg: #eef2f8;
+		--inv-heading-transform: uppercase;
+		--inv-heading-spacing: 0.05em;
+	}
+
+	/* Typewriter: monospace, dashed rules */
+	.theme-typewriter {
+		--inv-font: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+		--inv-fg: #222;
+		--inv-accent: #222;
+		--inv-rule: #999;
+		--inv-table-border: 1px dashed #999;
+		--inv-head-rule: 1px dashed #222;
+		--inv-total-rule: #222;
+		--inv-heading-transform: uppercase;
 	}
 
 	.flex {
@@ -376,8 +453,15 @@
 
 	table {
 		width: 100%;
-		border: 1px solid var(--200);
+		border: var(--inv-table-border);
 		border-radius: 4px;
+		border-spacing: 0;
+	}
+
+	th {
+		background: var(--inv-head-bg);
+		color: var(--inv-head-fg);
+		border-bottom: var(--inv-head-rule);
 	}
 
 	table,
@@ -395,7 +479,7 @@
 	}
 
 	tbody tr {
-		box-shadow: 0 -1px 0 0 var(--200);
+		box-shadow: 0 -1px 0 0 var(--inv-rule);
 		height: 40px;
 	}
 
@@ -462,6 +546,8 @@
 	.total {
 		font-weight: bold;
 		font-size: var(--fs-xs);
+		background: var(--inv-total-bg);
+		box-shadow: 0 -2px 0 0 var(--inv-total-rule);
 	}
 
 	.visible {
