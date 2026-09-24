@@ -6,6 +6,9 @@ node_modules
 /.svelte-kit
 /build
 
+# Cloudflare / Wrangler
+.wrangler
+
 # OS
 .DS_Store
 Thumbs.db
