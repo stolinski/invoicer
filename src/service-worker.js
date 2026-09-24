@@ -16,18 +16,36 @@ self.addEventListener('install', (event) => {
 		await cache.addAll(ASSETS);
 	}
 
-	event.waitUntil(addFilesToCache());
+	// Take over right away instead of waiting for every tab to close
+	event.waitUntil(addFilesToCache().then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {
 	// Remove previous cached data from disk
 	async function deleteOldCaches() {
+		let updated = false;
 		for (const key of await caches.keys()) {
-			if (key !== CACHE) await caches.delete(key);
+			if (key !== CACHE) {
+				await caches.delete(key);
+				updated = true;
+			}
+		}
+		return updated;
+	}
+
+	async function activate() {
+		const updated = await deleteOldCaches();
+		await self.clients.claim();
+
+		// If this replaced an older version, reload open tabs so they pick up the new build.
+		// Done from the worker so it works even for tabs running old page code.
+		if (updated) {
+			const windows = await self.clients.matchAll({ type: 'window' });
+			for (const client of windows) client.navigate(client.url);
 		}
 	}
 
-	event.waitUntil(deleteOldCaches());
+	event.waitUntil(activate());
 });
 
 self.addEventListener('fetch', (event) => {
